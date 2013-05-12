@@ -5,6 +5,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +18,7 @@ class Data
 {
     public int x;
     public int y;
-    public float p;
+    public Float p;
     
     public Data(int x, int y, float p)
     {
@@ -25,9 +28,36 @@ class Data
     }
 }
 
-public class Main
+/**
+ * Klasa porównująca po zmiennej: z
+ * @author Michal
+ */
+class CompareByP implements Comparator<Data> 
 {
+    /**
+     * komparator
+     * @param o1 obiekt 1
+     * @param o2 obiekt 2
+     * @return wynik
+     */
+    @Override
+    public int compare(Data o1, Data o2) 
+    {
+        return o1.p.compareTo(o2.p);
+    }
+}
 
+public class Main
+{    
+    /**
+     * do wypisow testowych
+     */
+    private static Boolean test = Boolean.TRUE;
+    
+
+    private ArrayList<Data> DataList;
+    private Map<Integer, Vertex> VertexMap;
+    
     /**
      * @return the Test
      */
@@ -35,11 +65,7 @@ public class Main
     {
         return test;
     }
-    
-    /**
-     * do wypisow testowych
-     */
-    private static Boolean test = Boolean.TRUE;
+
     
     /**
      * main 
@@ -76,7 +102,8 @@ public class Main
             System.out.println("conn url: "+ url +"\n"+"end vertex: "+vertexIndex);
         
         Main m = new Main();
-        m.PrintResult(m.polaczDoBazy(url), vertexIndex);
+        m.polaczDoBazy(url);
+        m.Go(vertexIndex);
     }
     
     /**
@@ -84,9 +111,8 @@ public class Main
      * @param url url do bazy
      * @return lista punktow z bazy
      */
-    private Map<Integer, Vertex> polaczDoBazy(String url)
+    private void polaczDoBazy(String url)
     {
-        Map<Integer, Vertex> map = new HashMap<>();
         try 
         {
             Connection con = DriverManager.getConnection(url);
@@ -103,8 +129,8 @@ public class Main
 //                if(rs == null)
 //                    return null;
 //            }
-            
-            ResolveEdges(getData(rs, map), map);
+                
+            DataList = getData(rs);        
             
             rs.close();
             st.close();
@@ -115,51 +141,16 @@ public class Main
             if(Main.getTest())
                 e.printStackTrace(); 
         }
-        
-        return map;
     }
 
     /**
      * pobranie wyniku koncowego
      * @param tempList lista punktow wejsciowych
      */
-    private void PrintResult(Map<Integer, Vertex> tempVertexes, int vertexIndex)
+    private void PrintResult(double result)
     {
-        Double result = -1.123;
-        
-        try
-        {
-            ArrayList<Vertex> vertices = new ArrayList<>();
-
-            for (Map.Entry<Integer, Vertex> entry : tempVertexes.entrySet()) 
-            {
-                vertices.add(entry.getValue());
-            }
-            
-            ////////////////////////////////////////////////////////////////////////////////////////////////
-            // zmienić to 
-            Dijkstra.computePaths(vertices.get(0));
-
-            for (Vertex v : vertices) 
-            {
-//                if (v.minDistance != Double.POSITIVE_INFINITY) 
-//                {
-                    
-                    if(tempVertexes.get(vertexIndex) == v)
-                        System.out.println(" - - - znalazłem - - - - : " + v );
-                    
-                    System.out.println("Distance to " + v + ": " + v.minDistance);
-
-                    List<Vertex> path = Dijkstra.getShortestPathTo(v);
-
-                    System.out.println("Path: " + path);
-//                }
-            }
-        }
-        catch(Exception e)
-        {
-            result = (double)new Random().nextInt(200) + new Random().nextDouble();
-        }
+               
+//        result = (double)new Random().nextInt(200) + new Random().nextDouble();
         
         System.out.println("Maksimum : " + String.format("%.3f", result).replace(",", "."));
     }
@@ -210,9 +201,9 @@ public class Main
      * @throws SQLException t
      * @throws NumberFormatException t
      */
-    private List<Data> getData(ResultSet rs, Map<Integer, Vertex> tempMap) throws SQLException, NumberFormatException
+    private ArrayList<Data> getData(ResultSet rs) throws SQLException, NumberFormatException
     {
-        List<Data> tmpDataList = new ArrayList<>();
+        ArrayList<Data> tmpDataList = new ArrayList<>();
         
         while (rs.next()) 
         {
@@ -221,9 +212,6 @@ public class Main
             int y = rs.getInt(3);
             float p = rs.getFloat(4);
             
-            tempMap.put(x, new Vertex(x));
-            tempMap.put(y, new Vertex(y));
-
             tmpDataList.add(new Data(x,y,p));
             
             if(getTest())
@@ -239,5 +227,95 @@ public class Main
         {
             map.get(d.x).adjacencies.add(new Edge(map.get(d.y), d.p));
         }
+    }
+
+    private ArrayList<Vertex> ConvertMapOfVertextToList(Map<Integer, Vertex> tempVertexes)
+    {
+        ArrayList<Vertex> vertices = new ArrayList<>();
+        for (Map.Entry<Integer, Vertex> entry : tempVertexes.entrySet()) 
+        {
+            vertices.add(entry.getValue());
+        }
+        return vertices;
+    }
+
+    private Map<Integer, Vertex> GetGraphFromData()
+    {
+        Map<Integer, Vertex> map = new HashMap<>();
+        
+        for(Data d: DataList)
+        {
+            map.put(d.x, new Vertex(d.x));
+            map.put(d.y, new Vertex(d.y));
+        }
+        
+        return map;
+    }
+    
+    private boolean ResolveProblem(int vertexIndex)
+    {
+        boolean found = false;
+        
+        ArrayList<Vertex> vertices = ConvertMapOfVertextToList(VertexMap);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // zmienić to z 0 na 1
+        Dijkstra.computePaths(vertices.get(0));
+
+        for (Vertex v : vertices) 
+        {
+//                if (v.minDistance != Double.POSITIVE_INFINITY) 
+//                {
+
+                if(VertexMap.get(VertexMap) == v)
+                    found = true;
+
+                if(Main.getTest())
+                {
+                    if(VertexMap.get(vertexIndex) == v)
+                        System.out.println(" - - - znalazłem - - - - - - - - - - - - - - - -  : " + v );
+                    System.out.println("Distance to " + v + ": " + v.minDistance);
+                    List<Vertex> path = Dijkstra.getShortestPathTo(v);
+                    System.out.println("Path: " + path);
+                }
+
+//                }
+        }
+        
+        return found;
+    }
+    
+    private Float Go(int vertexIndex)
+    {
+        Collections.sort(DataList, new CompareByP());
+        
+        Float result = DataList.get(0).p;
+        
+        for(int i=0; i < DataList.size(); ++i)
+        {
+            if(VertexMap != null)
+                VertexMap.clear();
+            VertexMap = GetGraphFromData();
+            ResolveEdges(DataList, VertexMap);
+        
+            
+            
+            if(ResolveProblem(vertexIndex))
+            {
+                DataList.remove(0);
+                continue;
+            }
+            
+            result = DataList.get(i).p;
+            
+        }
+        
+        if(Main.getTest())
+        {
+            System.out.println(" - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
+            System.out.println("Obecny wynik: "+ result+"\n");
+        }
+        
+        return result;
     }
 }
