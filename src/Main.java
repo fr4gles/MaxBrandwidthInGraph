@@ -1,4 +1,5 @@
 
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -12,69 +13,18 @@ import java.util.List;
 import java.util.Map;
 
 
-class Data
-{
-    public int x;
-    public int y;
-    public Float p;
-    
-    public Data(int x, int y, float p)
-    {
-        this.x = x;
-        this.y = y;
-        this.p = p;
-    }
-}
-
-/**
- * Klasa porównująca po zmiennej: z
- * @author Michal
- */
-class CompareByP implements Comparator<Data> 
-{
-    /**
-     * komparator
-     * @param o1 obiekt 1
-     * @param o2 obiekt 2
-     * @return wynik
-     */
-    @Override
-    public int compare(Data o1, Data o2) 
-    {
-        return o1.p.compareTo(o2.p);
-    }
-}
-
 public class Main
 {    
     /**
      * do wypisow testowych
      */
     private static Boolean test = Boolean.FALSE;
+    
+    /**
+     * zbiera dane z całego programu
+     */
     public static String degugLog = "";
 
-    /**
-     * @param aTest the test to set
-     */
-    public static void setTest(Boolean aTest)
-    {
-        test = aTest;
-    }
-    
-
-    private ArrayList<Data> DataList;
-    private Map<Integer, Vertex> VertexMap;
-    private Vertex SourceVertex;
-    
-    /**
-     * @return the Test
-     */
-    public static Boolean getTest()
-    {
-        return test;
-    }
-
-    
     /**
      * main 
      * @param args wejscie
@@ -103,16 +53,32 @@ public class Main
         {
             Main.setTest(true);
 
-            Main.degugLog += e.getMessage() + "\n";
-            Main.degugLog += e.getStackTrace().toString() + "\n";
+            Main.degugLog =  Main.degugLog.concat(  e.getMessage() + "\n" );
+            Main.degugLog =  Main.degugLog.concat(  e.getStackTrace().toString() + "\n" );
         }
         
         
-        Main.degugLog +="conn url: "+ url +"\n"+"end vertex: "+vertexIndex +"\n";
+        Main.degugLog =  Main.degugLog.concat( "conn url: "+ url +"\n"+"end vertex: "+vertexIndex +"\n");
         
         Main m = new Main();
-        m.polaczDoBazy(url);
-        m.Go(vertexIndex);
+        Path path = new Path();
+        
+        Float result = -1f;
+        try
+        {
+            result = path.Go(vertexIndex, m.polaczDoBazy(url));
+        }
+        catch(Exception e)
+        {
+            Main.degugLog = Main.degugLog.concat(e.getMessage() + "\n");
+            Main.degugLog = Main.degugLog.concat(e.getStackTrace().toString() + "\n");
+            Main.setTest(true);
+        }
+        
+        if(Main.getTest())
+            System.out.println(Main.degugLog);
+        
+        System.out.println("Przepustowość : " + String.format("%.3f", result).replace(",", "."));
     }
     
     /**
@@ -120,8 +86,9 @@ public class Main
      * @param url url do bazy
      * @return lista punktow z bazy
      */
-    private void polaczDoBazy(String url)
+    private ArrayList<Data> polaczDoBazy(String url)
     {
+        ArrayList<Data> tmp = new ArrayList<>();
         try 
         {
             Connection con = DriverManager.getConnection(url);
@@ -138,11 +105,11 @@ public class Main
                 if(rs == null)
                 {
                     System.out.println(Main.degugLog);
-                    return;
+                    return null;
                 }
             }
                 
-            DataList = getData(rs);        
+            tmp = getData(rs);        
             
             rs.close();
             st.close();
@@ -150,9 +117,10 @@ public class Main
         }
         catch (SQLException | NumberFormatException e)
         {
-            Main.degugLog += e.getMessage() + "\n";
-            Main.degugLog += e.getStackTrace().toString() + "\n";
+            Main.degugLog =  Main.degugLog.concat(e.getMessage() + "\n");
+            Main.degugLog =  Main.degugLog.concat(e.getStackTrace().toString() + "\n");
         }
+        return tmp;
     }
 
     /**
@@ -188,9 +156,9 @@ public class Main
         }
         catch(Exception e)
         {
-            Main.degugLog += "coś poszło bardzo nie tak :(" + "\n";
-            Main.degugLog += e.getMessage() + "\n";
-            Main.degugLog += e.getStackTrace().toString() + "\n";
+            Main.degugLog =  Main.degugLog.concat("coś poszło bardzo nie tak :(" + "\n");
+            Main.degugLog =  Main.degugLog.concat(e.getMessage() + "\n");
+            Main.degugLog =  Main.degugLog.concat(e.getStackTrace().toString() + "\n");
             
             Main.setTest(true);
         }
@@ -218,119 +186,26 @@ public class Main
             tmpDataList.add(new Data(x,y,p));
             tmpDataList.add(new Data(y,x,p));
             
-            Main.degugLog += index + " " + x + " " + y + " " +p + "\n";
+            Main.degugLog =  Main.degugLog.concat(index + " " + x + " " + y + " " +p + "\n");
         }
         
         return tmpDataList;
     }
     
-    private void ResolveEdges(List<Data> dataList, Map<Integer, Vertex> map)
+    /**
+     * @param aTest the test to set
+     */
+    public static void setTest(Boolean aTest)
     {
-        for(Data d : dataList)
-        {
-            map.get(d.x).adjacencies.add(new Edge(map.get(d.y), d.p));
-        }
-    }
-
-    private ArrayList<Vertex> ConvertMapOfVertextToList(Map<Integer, Vertex> tempVertexes)
-    {
-        ArrayList<Vertex> vertices = new ArrayList<>();
-        for (Map.Entry<Integer, Vertex> entry : tempVertexes.entrySet()) 
-        {
-            vertices.add(entry.getValue());
-        }
-        return vertices;
-    }
-
-    private Map<Integer, Vertex> GetGraphFromData()
-    {
-        Map<Integer, Vertex> map = new HashMap<>();
-        
-        for(Data d: DataList)
-        {
-            map.put(d.x, new Vertex(d.x));
-            map.put(d.y, new Vertex(d.y));
-        }
-        
-        return map;
+        test = aTest;
     }
     
-    private boolean ResolveProblem(int vertexIndex)
-    {
-        boolean found = false;
-        
-        ArrayList<Vertex> vertices = ConvertMapOfVertextToList(VertexMap);
-
-        for (Vertex v : vertices)
-        {
-            if(v.name.equals("v1"))
-            {
-                try
-                {
-                    Dijkstra.computePaths(vertices.get(vertices.indexOf(v)));
-                }
-                catch(ArrayIndexOutOfBoundsException e)
-                {
-                    return false;
-                }
-                break;
-            }
-        }
-                
-        for (Vertex v : vertices) 
-        {
-            if (v.minDistance != Double.POSITIVE_INFINITY) 
-            {
-
-                if(VertexMap.get(vertexIndex) == v)
-                    found = true;
-
-                if(VertexMap.get(vertexIndex) == v)
-                    Main.degugLog += " - - - znalazłem - - - - - - - - - - - - - - - -  : " + v +"\n";
-
-                List<Vertex> path = Dijkstra.getShortestPathTo(v);
-                Main.degugLog += "Distance to " + v + ": " + v.minDistance + "\n"
-                            + "Path: " + path + "\n";
-            }
-        }
-        
-        return found;
-    }
     
-    private boolean FindMaxBrandwidth(int vertexIndex)
+    /**
+     * @return the Test
+     */
+    public static Boolean getTest()
     {
-        if(VertexMap != null)
-            VertexMap.clear();
-        
-        VertexMap = GetGraphFromData();
-        ResolveEdges(DataList, VertexMap);            
-
-        return ResolveProblem(vertexIndex);
-    }
-    
-    private Float Go(int vertexIndex)
-    {
-        Collections.sort(DataList, new CompareByP());
-        
-        Float result = DataList.get(0).p;
-        
-        for(; DataList.size() > 2 ; DataList.remove(DataList.get(0)))
-        {
-            if(!FindMaxBrandwidth(vertexIndex))
-            {
-                Main.degugLog += "STOP --> " + DataList.get(0).p + "\n";
-                break;
-            }
-            
-            result = DataList.get(0).p;
-        }
-        
-        
-        if(Main.getTest())
-            System.out.println(Main.degugLog);
-
-        System.out.println("Przepustowość : " + String.format("%.3f", result).replace(",", "."));
-
-        return result;
+        return test;
     }
 }
