@@ -5,13 +5,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 
 class Data
@@ -52,11 +50,21 @@ public class Main
     /**
      * do wypisow testowych
      */
-    private static Boolean test = Boolean.TRUE;
+    private static Boolean test = Boolean.FALSE;
+    public static String degugLog = "";
+
+    /**
+     * @param aTest the test to set
+     */
+    public static void setTest(Boolean aTest)
+    {
+        test = aTest;
+    }
     
 
     private ArrayList<Data> DataList;
     private Map<Integer, Vertex> VertexMap;
+    private Vertex SourceVertex;
     
     /**
      * @return the Test
@@ -81,8 +89,11 @@ public class Main
         }
         catch(Exception e)
         {
+            Main.setTest(true);
             url = "jdbc:sqlserver://MICHAL-KOMPUTER\\SQLEXPRESS;databaseName=ztp;user=user;password=user";
         }
+        
+        Main.degugLog += " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" + "\n";
         
         try
         {
@@ -90,16 +101,14 @@ public class Main
         }
         catch(Exception e)
         {
-            Main.test = true;
-            
-            if(Main.getTest())
-                e.printStackTrace();
-            
-            return;
+            Main.setTest(true);
+
+            Main.degugLog += e.getMessage() + "\n";
+            Main.degugLog += e.getStackTrace().toString() + "\n";
         }
         
-        if(Main.getTest())
-            System.out.println("conn url: "+ url +"\n"+"end vertex: "+vertexIndex);
+        
+        Main.degugLog +="conn url: "+ url +"\n"+"end vertex: "+vertexIndex +"\n";
         
         Main m = new Main();
         m.polaczDoBazy(url);
@@ -119,16 +128,19 @@ public class Main
             Statement st = con.createStatement();
             
             ResultSet rs = null;
-//            try
-//            {
+            try
+            {
                 rs = st.executeQuery("SELECT * FROM Gtable");
-//            }
-//            catch(Exception e)
-//            {
-//                rs = HandleUnexpected(rs, st);
-//                if(rs == null)
-//                    return null;
-//            }
+            }
+            catch(Exception e)
+            {
+                rs = HandleUnexpected(rs, st);
+                if(rs == null)
+                {
+                    System.out.println(Main.degugLog);
+                    return;
+                }
+            }
                 
             DataList = getData(rs);        
             
@@ -138,21 +150,9 @@ public class Main
         }
         catch (SQLException | NumberFormatException e)
         {
-            if(Main.getTest())
-                e.printStackTrace(); 
+            Main.degugLog += e.getMessage() + "\n";
+            Main.degugLog += e.getStackTrace().toString() + "\n";
         }
-    }
-
-    /**
-     * pobranie wyniku koncowego
-     * @param tempList lista punktow wejsciowych
-     */
-    private void PrintResult(double result)
-    {
-               
-//        result = (double)new Random().nextInt(200) + new Random().nextDouble();
-        
-        System.out.println("Maksimum : " + String.format("%.3f", result).replace(",", "."));
     }
 
     /**
@@ -186,10 +186,13 @@ public class Main
         {
             rs = st.executeQuery("SELECT * FROM 'Gtable'");
         }
-        catch(Exception eee)
+        catch(Exception e)
         {
-            if(Main.getTest())
-                System.out.println("cos poszlo nie tak :(");
+            Main.degugLog += "coś poszło bardzo nie tak :(" + "\n";
+            Main.degugLog += e.getMessage() + "\n";
+            Main.degugLog += e.getStackTrace().toString() + "\n";
+            
+            Main.setTest(true);
         }
         return rs;
     }
@@ -213,9 +216,9 @@ public class Main
             float p = rs.getFloat(4);
             
             tmpDataList.add(new Data(x,y,p));
+            tmpDataList.add(new Data(y,x,p));
             
-            if(getTest())
-                System.out.println(index + " " + x + " " + y + " " +p);
+            Main.degugLog += index + " " + x + " " + y + " " +p + "\n";
         }
         
         return tmpDataList;
@@ -258,31 +261,51 @@ public class Main
         
         ArrayList<Vertex> vertices = ConvertMapOfVertextToList(VertexMap);
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////
-        // zmienić to z 0 na 1
-        Dijkstra.computePaths(vertices.get(0));
-
+        for (Vertex v : vertices)
+        {
+            if(v.name.equals("v1"))
+            {
+                try
+                {
+                    Dijkstra.computePaths(vertices.get(vertices.indexOf(v)));
+                }
+                catch(ArrayIndexOutOfBoundsException e)
+                {
+                    return false;
+                }
+                break;
+            }
+        }
+                
         for (Vertex v : vertices) 
         {
-//                if (v.minDistance != Double.POSITIVE_INFINITY) 
-//                {
+            if (v.minDistance != Double.POSITIVE_INFINITY) 
+            {
 
-                if(VertexMap.get(VertexMap) == v)
+                if(VertexMap.get(vertexIndex) == v)
                     found = true;
 
-                if(Main.getTest())
-                {
-                    if(VertexMap.get(vertexIndex) == v)
-                        System.out.println(" - - - znalazłem - - - - - - - - - - - - - - - -  : " + v );
-                    System.out.println("Distance to " + v + ": " + v.minDistance);
-                    List<Vertex> path = Dijkstra.getShortestPathTo(v);
-                    System.out.println("Path: " + path);
-                }
+                if(VertexMap.get(vertexIndex) == v)
+                    Main.degugLog += " - - - znalazłem - - - - - - - - - - - - - - - -  : " + v +"\n";
 
-//                }
+                List<Vertex> path = Dijkstra.getShortestPathTo(v);
+                Main.degugLog += "Distance to " + v + ": " + v.minDistance + "\n"
+                            + "Path: " + path + "\n";
+            }
         }
         
         return found;
+    }
+    
+    private boolean FindMaxBrandwidth(int vertexIndex)
+    {
+        if(VertexMap != null)
+            VertexMap.clear();
+        
+        VertexMap = GetGraphFromData();
+        ResolveEdges(DataList, VertexMap);            
+
+        return ResolveProblem(vertexIndex);
     }
     
     private Float Go(int vertexIndex)
@@ -291,31 +314,23 @@ public class Main
         
         Float result = DataList.get(0).p;
         
-        for(int i=0; i < DataList.size(); ++i)
+        for(; DataList.size() > 2 ; DataList.remove(DataList.get(0)))
         {
-            if(VertexMap != null)
-                VertexMap.clear();
-            VertexMap = GetGraphFromData();
-            ResolveEdges(DataList, VertexMap);
-        
-            
-            
-            if(ResolveProblem(vertexIndex))
+            if(!FindMaxBrandwidth(vertexIndex))
             {
-                DataList.remove(0);
-                continue;
+                Main.degugLog += "STOP --> " + DataList.get(0).p + "\n";
+                break;
             }
             
-            result = DataList.get(i).p;
-            
+            result = DataList.get(0).p;
         }
+        
         
         if(Main.getTest())
-        {
-            System.out.println(" - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
-            System.out.println("Obecny wynik: "+ result+"\n");
-        }
-        
+            System.out.println(Main.degugLog);
+
+        System.out.println("Przepustowość : " + String.format("%.3f", result).replace(",", "."));
+
         return result;
     }
 }
