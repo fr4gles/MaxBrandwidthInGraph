@@ -7,11 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /**
  *
  * @author Michal
@@ -28,7 +23,7 @@ public class Path
      * przy czym: klucz to numer wierzchołka
      * wartość to referencja na wierzchołek
      */
-    private Map<Integer, Vertex> VertexMap;
+    private Map<Integer, Wierzcholek> VertexMap;
     
     /**
      * Funckja uzupełniająca wierzchołki o krawędzie wychodzące z nich
@@ -36,11 +31,11 @@ public class Path
      * @param dataList dane o krawędziach
      * @param map mapa wierzchołków
      */
-    private void ResolveEdges(List<Data> dataList, Map<Integer, Vertex> map)
+    private void ResolveEdges(List<Data> dataList, Map<Integer, Wierzcholek> map)
     {
         for(Data d : dataList)
         {
-            map.get(d.x).adjacencies.add(new Edge(map.get(d.y), d.p));
+            map.get(d.X).getPrzylegleWierzcholki().add(new Krawedz(map.get(d.Y), d.P));
         }
     }
 
@@ -49,10 +44,10 @@ public class Path
      * @param map mapa wierzchołków
      * @return tablica wierzchołków
      */
-    private ArrayList<Vertex> ConvertMapOfVertextToList(Map<Integer, Vertex> map)
+    private ArrayList<Wierzcholek> ConvertMapOfVertextToList(Map<Integer, Wierzcholek> map)
     {
-        ArrayList<Vertex> vertices = new ArrayList<>();
-        for (Map.Entry<Integer, Vertex> entry : map.entrySet()) 
+        ArrayList<Wierzcholek> vertices = new ArrayList<>();
+        for (Map.Entry<Integer, Wierzcholek> entry : map.entrySet()) 
         {
             vertices.add(entry.getValue());
         }
@@ -63,14 +58,14 @@ public class Path
      * uzupełnia mapę wierzchołków z dancyh o krawędziach
      * @return mapa wierzchołków
      */
-    private Map<Integer, Vertex> GetGraphFromData()
+    private Map<Integer, Wierzcholek> GetGraphFromData()
     {
-        Map<Integer, Vertex> map = new HashMap<>();
+        Map<Integer, Wierzcholek> map = new HashMap<>();
         
         for(Data d: DataList)
         {
-            map.put(d.x, new Vertex(d.x));
-            map.put(d.y, new Vertex(d.y));
+            map.put(d.X, new Wierzcholek(d.X));
+            map.put(d.Y, new Wierzcholek(d.Y));
         }
         
         return map;
@@ -87,15 +82,15 @@ public class Path
     {
         boolean found = false;
         
-        ArrayList<Vertex> vertices = ConvertMapOfVertextToList(VertexMap);
+        ArrayList<Wierzcholek> vertices = ConvertMapOfVertextToList(VertexMap);
 
         try
         {
-            for (Vertex v : vertices)
+            for (Wierzcholek v : vertices)
             {
-                if(v.index == 1)
+                if(v.getId() == 1)
                 {
-                    Dijkstra.computePaths(v);
+                    DijkstraAlgorithm.wyznaczSciezki(v);
                     break;
                 }
             }
@@ -105,17 +100,17 @@ public class Path
             return false;
         }
                 
-        for (Vertex v : vertices) 
+        for (Wierzcholek v : vertices) 
         {
-            if (v.minDistance != Double.POSITIVE_INFINITY) 
+            if (v.getMinDistance() != Double.POSITIVE_INFINITY) 
             {
-                if(VertexMap.get(vertexIndex).index == v.index)
+                if(VertexMap.get(vertexIndex).getId() == v.getId())
                 {
-                    Main.degugLog =  Main.degugLog.concat(" - - - znalazłem - - - - - - - - - - - - - - - -  : " + v +"\n");
+                    Main.DegugLog =  Main.DegugLog.concat(" - - - znalazłem - - - - - - - - - - - - - - - -  : " + v +"\n");
                     found = true;
                 }
 
-                Main.degugLog =  Main.degugLog.concat( "Path: " + Dijkstra.getShortestPathTo(v) + "\n" );
+                Main.DegugLog =  Main.DegugLog.concat( "Path: " + DijkstraAlgorithm.getNajkrotszaDrogaDo(v) + "\n" );
             }
         }
         
@@ -153,17 +148,17 @@ public class Path
         
         Collections.sort(DataList, new CompareByP());
         
-        Float result = DataList.get(0).p;
+        Float result = DataList.get(0).P;
         
         for(; DataList.size() > 2 ; DataList.remove(DataList.get(0)))
         {
             if(!PrepareToFindMaxBrandwidth(vertexIndex))
             {
-                Main.degugLog =  Main.degugLog.concat( "STOP --> " + DataList.get(0).p + "\n" );
+                Main.DegugLog =  Main.DegugLog.concat( "STOP --> " + DataList.get(0).P + "\n" );
                 break;
             }
             
-            result = DataList.get(0).p;
+            result = DataList.get(0).P;
         }
 
         return result;
@@ -186,124 +181,234 @@ class CompareByP implements Comparator<Data>
     @Override
     public int compare(Data o1, Data o2) 
     {
-        return o1.p.compareTo(o2.p);
+        return o1.P.compareTo(o2.P);
     }
 }
 
 /**
  * Klasa przechowująca dane z bazy
- * główne krawędzie (x,y)
- * oraz przepustowość p
+ * główne krawędzie (X,Y)
+ * oraz przepustowość P
  * @author Michal
  */
 class Data
 {
-    public int x;
-    public int y;
-    public Float p;
+    /**
+     * identyfikator pierwszego wierzcholka
+     */
+    public int X;
+    
+    /**
+     * identyfikator drugiego wierzcholka
+     */
+    public int Y;
+    
+    /**
+     * wartosc przepustowości
+     */
+    public Float P;
     
     /**
      * konstruktor inicjalizujacy
-     * @param x wierzchołek A
-     * @param y wierzchołek B
-     * @param p przepustowość
+     * @param X wierzchołek A
+     * @param Y wierzchołek B
+     * @param P przepustowość
      */
     public Data(int x, int y, float p)
     {
-        this.x = x;
-        this.y = y;
-        this.p = p;
+        this.X = x;
+        this.Y = y;
+        this.P = p;
     }
 }
+
+
+
 
 
 /**
  * klasa przechowująca krawędzie pomiędzy wierzchołkami
  * @author Michal
  */
-class Edge 
+class Krawedz 
 {
     /**
      * cel krawędzi
      */
-    public final Vertex target;
+    private final Wierzcholek cel;
     
     /**
-     * waga krawędzi
+     * waga/przepustowość krawędzi
      */
-    public final double weight;
+    private final double przepustowosc;
 
     /**
      * konstruktor
      * @param argTarget cel
-     * @param argWeight waga
+     * @param argBrandwidth waga
      */
-    public Edge(Vertex argTarget, double argWeight) 
+    public Krawedz(Wierzcholek argTarget, double argBrandwidth) 
     {
-        target = argTarget;
-        weight = argWeight;
+        cel = argTarget;
+        przepustowosc = argBrandwidth;
+    }
+
+    /**
+     * @return the target
+     */
+    public Wierzcholek getTarget()
+    {
+        return cel;
+    }
+
+    /**
+     * @return the brandwidth
+     */
+    public double getBrandwidth()
+    {
+        return przepustowosc;
     }
 }
+
+
 
 
 /**
  * Klasa przechowująca wierzchołki
  * @author Michal
  */
-class Vertex implements Comparable<Vertex> 
+class Wierzcholek implements Comparable<Wierzcholek> 
 {
-    public double               minDistance = Double.POSITIVE_INFINITY;
-    public final int            index;
-    public ArrayList<Edge>      adjacencies;
-    public Vertex               previous;
+    /**
+     * zmienna opusjąca minimalną odległość pomiędzy wierzchołkami
+     */
+    private double              minimalnaOdleglosc = Double.POSITIVE_INFINITY;
+    
+    /**
+     * identyfikator wierzchołka
+     */
+    private final int            id;
+    
+    /**
+     * zmienna opisujaca przylegle wierzcholki
+     */
+    private ArrayList<Krawedz>      przylegleWierzcholki;
+    
+    /**
+     * poprzedzajacy wierzcholek.
+     * Dzięki poprzedzajacym wierzcholkom jestemy w stanie odtworzyc sciezke jaka poruszal sie algorytm
+     * jest to referencja na poprzedzajacy w sciezce wierzcholek.
+     */
+    private Wierzcholek               poprzedniWierzcholek;
 
-    public Vertex(int argName) 
+    public Wierzcholek(int argName) 
     {
-        index = argName;
-        adjacencies = new ArrayList<>();
+        id = argName;
+        przylegleWierzcholki = new ArrayList<>();
     }
 
+    @Override
     public String toString() 
     {
-        return "v"+index;
+        return "v"+getId();
     }
 
-    public int compareTo(Vertex other) 
+    @Override
+    public int compareTo(Wierzcholek other) 
     {
-        return Double.compare(minDistance, other.minDistance);
+        return Double.compare(getMinDistance(), other.getMinDistance());
+    }
+
+    /**
+     * @return the minDistance
+     */
+    public double getMinDistance()
+    {
+        return minimalnaOdleglosc;
+    }
+
+    /**
+     * @param minDistance the minDistance to set
+     */
+    public void setMinDistance(double minDistance)
+    {
+        this.minimalnaOdleglosc = minDistance;
+    }
+
+    /**
+     * @return the id
+     */
+    public int getId()
+    {
+        return id;
+    }
+
+    /**
+     * @return the przylegleWierzcholki
+     */
+    public ArrayList<Krawedz> getPrzylegleWierzcholki()
+    {
+        return przylegleWierzcholki;
+    }
+
+    /**
+     * @param przylegleWierzcholki the przylegleWierzcholki to set
+     */
+    public void setPrzylegleWierzcholki(ArrayList<Krawedz> przylegleWierzcholki)
+    {
+        this.przylegleWierzcholki = przylegleWierzcholki;
+    }
+
+    /**
+     * @return the poprzedniWierzcholek
+     */
+    public Wierzcholek getPoprzedniWierzcholek()
+    {
+        return poprzedniWierzcholek;
+    }
+
+    /**
+     * @param poprzedniWierzcholek the poprzedniWierzcholek to set
+     */
+    public void setPoprzedniWierzcholek(Wierzcholek poprzedniWierzcholek)
+    {
+        this.poprzedniWierzcholek = poprzedniWierzcholek;
     }
 }
 
-class Dijkstra 
+/**
+ * klasa zawierajaca potrzebne funkcje do wyznaczenia sciezki algorytmem Dijkstry
+ * @author Michal
+ */
+class DijkstraAlgorithm 
 {
     /**
      * Funkcja obliczająca zgodnie z algorytmem Djikstry najkrótszą ścieżkę do celu
      * @param source źródłowy wierzchołek
      */
-    public static void computePaths(Vertex source) 
+    public static void wyznaczSciezki(Wierzcholek source) 
     {
-        source.minDistance = 0.;
+        source.setMinDistance(0.);
 
-        PriorityQueue<Vertex> vertexQueue = new PriorityQueue<Vertex>();
+        PriorityQueue<Wierzcholek> vertexQueue = new PriorityQueue<>();
 
         vertexQueue.add(source);
 
         while (!vertexQueue.isEmpty()) 
         {
-            Vertex u = vertexQueue.poll();
+            Wierzcholek u = vertexQueue.poll();
 
-            // Visit each edge exiting u
-            for (Edge e : u.adjacencies) 
+            for (Krawedz e : u.getPrzylegleWierzcholki()) 
             {
-                Vertex v                = e.target;
-                double weight           = e.weight;
-                double distanceThroughU = u.minDistance + weight;
+                Wierzcholek v           = e.getTarget();
+                double weight           = e.getBrandwidth();
+                double distanceThroughU = u.getMinDistance() + weight;
 
-                if (distanceThroughU < v.minDistance) 
+                if (distanceThroughU < v.getMinDistance()) 
                 {
                     vertexQueue.remove(v);
-                    v.minDistance = distanceThroughU;
-                    v.previous    = u;
+                    v.setMinDistance(distanceThroughU);
+                    v.setPoprzedniWierzcholek(u);
                     vertexQueue.add(v);
                 }
             }
@@ -315,11 +420,11 @@ class Dijkstra
      * @param target cel
      * @return lista wierzchołków wchodząca w skład ścieżki
      */
-    public static List<Vertex> getShortestPathTo(Vertex target) 
+    public static List<Wierzcholek> getNajkrotszaDrogaDo(Wierzcholek target) 
     {
-        List<Vertex> path = new ArrayList<Vertex>();
+        List<Wierzcholek> path = new ArrayList<>();
 
-        for (Vertex vertex = target; vertex != null; vertex = vertex.previous) 
+        for (Wierzcholek vertex = target; vertex != null; vertex = vertex.getPoprzedniWierzcholek()) 
         {
             path.add(vertex);
         }

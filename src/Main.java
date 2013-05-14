@@ -1,16 +1,10 @@
 
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 
 public class Main
@@ -23,7 +17,7 @@ public class Main
     /**
      * zbiera dane z całego programu
      */
-    public static String degugLog = "";
+    public static String DegugLog = "";
 
     /**
      * main 
@@ -43,7 +37,7 @@ public class Main
             url = "jdbc:sqlserver://MICHAL-KOMPUTER\\SQLEXPRESS;databaseName=ztp;user=user;password=user";
         }
         
-        Main.degugLog += " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" + "\n";
+        Main.DegugLog += " - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" + "\n";
         
         try
         {
@@ -53,12 +47,12 @@ public class Main
         {
             Main.setTest(true);
 
-            Main.degugLog =  Main.degugLog.concat(  e.getMessage() + "\n" );
-            Main.degugLog =  Main.degugLog.concat(  e.getStackTrace().toString() + "\n" );
+            Main.DegugLog =  Main.DegugLog.concat(  e.getMessage() + "\n" );
+            Main.DegugLog =  Main.DegugLog.concat(  e.getStackTrace().toString() + "\n" );
         }
         
         
-        Main.degugLog =  Main.degugLog.concat( "conn url: "+ url +"\n"+"end vertex: "+vertexIndex +"\n");
+        Main.DegugLog =  Main.DegugLog.concat( "conn url: "+ url +"\n"+"end vertex: "+vertexIndex +"\n");
         
         Main m = new Main();
         Path path = new Path();
@@ -70,13 +64,13 @@ public class Main
         }
         catch(Exception e)
         {
-            Main.degugLog = Main.degugLog.concat(e.getMessage() + "\n");
-            Main.degugLog = Main.degugLog.concat(e.getStackTrace().toString() + "\n");
+            Main.DegugLog = Main.DegugLog.concat(e.getMessage() + "\n");
+            Main.DegugLog = Main.DegugLog.concat(e.getStackTrace().toString() + "\n");
             Main.setTest(true);
         }
         
         if(Main.getTest())
-            System.out.println(Main.degugLog);
+            System.out.println(Main.DegugLog);
         
         System.out.println("Przepustowość : " + String.format("%.3f", result).replace(",", "."));
     }
@@ -91,34 +85,32 @@ public class Main
         ArrayList<Data> tmp = new ArrayList<>();
         try 
         {
-            Connection con = DriverManager.getConnection(url);
-            Statement st = con.createStatement();
-            
-            ResultSet rs = null;
-            try
-            {
-                rs = st.executeQuery("SELECT * FROM Gtable");
-            }
-            catch(Exception e)
-            {
-                rs = HandleUnexpected(rs, st);
-                if(rs == null)
+            try (Connection con = DriverManager.getConnection(url); Statement st = con.createStatement())
+            {                
+                ResultSet rs = null;
+                try
                 {
-                    System.out.println(Main.degugLog);
-                    return null;
+                    rs = st.executeQuery("SELECT * FROM Gtable");
                 }
-            }
+                catch(Exception e)
+                {
+                    rs = HandleUnexpected(rs, st);
+                    if(rs == null)
+                    {
+                        System.out.println(Main.DegugLog);
+                        return null;
+                    }
+                }
+                    
+                tmp = getData(rs);        
                 
-            tmp = getData(rs);        
-            
-            rs.close();
-            st.close();
-            con.close();
+                rs.close();
+            }
         }
         catch (SQLException | NumberFormatException e)
         {
-            Main.degugLog =  Main.degugLog.concat(e.getMessage() + "\n");
-            Main.degugLog =  Main.degugLog.concat(e.getStackTrace().toString() + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(e.getMessage() + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(e.getStackTrace().toString() + "\n");
         }
         return tmp;
     }
@@ -135,8 +127,10 @@ public class Main
         {
             rs = st.executeQuery("SELECT * FROM `Gtable`");
         }
-        catch(Exception ee)
+        catch(Exception e)
         {
+            Main.DegugLog =  Main.DegugLog.concat(e.getMessage() + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(e.getStackTrace().toString() + "\n");
             rs = HandleMoreUnexpected(rs, st);
         }
         return rs;
@@ -156,9 +150,9 @@ public class Main
         }
         catch(Exception e)
         {
-            Main.degugLog =  Main.degugLog.concat("coś poszło bardzo nie tak :(" + "\n");
-            Main.degugLog =  Main.degugLog.concat(e.getMessage() + "\n");
-            Main.degugLog =  Main.degugLog.concat(e.getStackTrace().toString() + "\n");
+            Main.DegugLog =  Main.DegugLog.concat("coś poszło bardzo nie tak :(" + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(e.getMessage() + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(e.getStackTrace().toString() + "\n");
             
             Main.setTest(true);
         }
@@ -186,7 +180,7 @@ public class Main
             tmpDataList.add(new Data(x,y,p));
             tmpDataList.add(new Data(y,x,p));
             
-            Main.degugLog =  Main.degugLog.concat(index + " " + x + " " + y + " " +p + "\n");
+            Main.DegugLog =  Main.DegugLog.concat(index + " " + x + " " + y + " " +p + "\n");
         }
         
         return tmpDataList;
